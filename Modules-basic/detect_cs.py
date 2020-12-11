@@ -45,97 +45,94 @@ class mouseParam:
     def getPos(self):
         return (self.mouseEvent["x"], self.mouseEvent["y"])
 
-def getLightLocation(video_path):
-    video = cv2.VideoCapture(video_path)
-    ret, frame = cv2.VideoCapture(video_path).read()
+class GetCS_Starts:
+    def __init__(self, videos, num_cs):
+        self.videos = videos
+        self.num_cs = num_cs
+        self.cs_start_frames_sessions = []
+        self.light_coordinates = []
+        self.init_brightness = []
 
-    #表示するウィンドウ名
-    window_name = "Left click on the indicator."
-    #画像の表示
-    cv2.imshow(window_name, frame)
-    #コールバックの設定
-    mouseData = mouseParam(window_name)
-
-    while 1:
-        cv2.waitKey(20)
-        #左クリックがあったら表示
-        if mouseData.getEvent() == cv2.EVENT_LBUTTONDOWN:
-            coordinates = mouseData.getPos()
-            #print(coordinates)
-            break
-        #右クリックがあったら終了
-        elif mouseData.getEvent() == cv2.EVENT_RBUTTONDOWN:
-            break
-
-    cv2.destroyAllWindows()
-
-    return coordinates, frame[coordinates[1]][coordinates[0]][0]
-
-
-def detectCS(videos, num_cs):
-    #videos = natsorted(os.listdir(video_dir))
-    # videos = natsorted(glob.glob(video_dir + "/*.avi"))
-    print(videos)
-
-    cs_start_frames_sessions = []
-    light_coordinates = []
-    init_brightness = []
-    for i in range(len(videos)):
-
-        video_path = videos[i]
-        _light_coordinates, _init_brightness = getLightLocation(video_path)
-
-        light_coordinates.append(_light_coordinates)
-        init_brightness.append(_init_brightness)
-
-    for i in range(len(videos)):
-        video_path = videos[i]
-
+    def getLightLocation(self, video_path):
         video = cv2.VideoCapture(video_path)
+        ret, frame = cv2.VideoCapture(video_path).read()
 
-        frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+        #表示するウィンドウ名
+        window_name = "Left click on the indicator."
+        #画像の表示
+        cv2.imshow(window_name, frame)
+        #コールバックの設定
+        mouseData = mouseParam(window_name)
 
-        brightness = init_brightness[i]
-        print("init: "+str(brightness))
-        #CSがいったん始まったらfps*20秒+αフレームの間はCSを検出しないようにするためのもの
-        x = 0
-        #num_cs以上はCSを検出しない（StopRecordingしないで扉を開けてしまったときのため
-        y = num_cs
-
-        cs_start_frames = []
-        for j in range(frames):
-            if y == 0:
+        while 1:
+            cv2.waitKey(20)
+            #左クリックがあったら表示
+            if mouseData.getEvent() == cv2.EVENT_LBUTTONDOWN:
+                coordinates = mouseData.getPos()
+                #print(coordinates)
                 break
+            #右クリックがあったら終了
+            elif mouseData.getEvent() == cv2.EVENT_RBUTTONDOWN:
+                break
+
+        cv2.destroyAllWindows()
+
+        return coordinates, frame[coordinates[1]][coordinates[0]][0]
+
+
+    def __call__(self):
+        print(self.videos)
+
+        for i in range(len(self.videos)):
+
+            video_path = self.videos[i]
+            _light_coordinates, _init_brightness = self.getLightLocation(video_path)
+
+            self.light_coordinates.append(_light_coordinates)
+            self.init_brightness.append(_init_brightness)
+
+        for i in range(len(self.videos)):
+            video_path = self.videos[i]
+
+            video = cv2.VideoCapture(video_path)
+
+            frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+
+            brightness = self.init_brightness[i]
+            print("init: "+str(brightness))
+            #CSがいったん始まったらfps*20秒+αフレームの間はCSを検出しないようにするためのもの
+            x = 0
+            #num_cs以上はCSを検出しない（StopRecordingしないで扉を開けてしまったときのため
+            y = self.num_cs
+
+            cs_start_frames = []
+            for j in range(frames):
+                if y == 0:
+                    break
+                else:
+                    pass
+
+                ret, frame = video.read()
+
+                if ret:
+                    if frame[self.light_coordinates[i][1]][self.light_coordinates[i][0]][0] > brightness + 100 and x <= 0:
+                        cs_start_frames.append(j)
+                        print("Frame: "+str(j)+" brightness: "+str(frame[self.light_coordinates[i][1]][self.light_coordinates[i][0]][0]))
+                        #CSがいったん始まったらfps*20秒+αフレームの間はCSを検出しないようにするため
+                        x = 20 * 20 + 10
+                        y -= 1
+                    else:
+                        pass
+                    x -= 1
+
+            print("CS: "+str(len(cs_start_frames)))
+
+            if len(cs_start_frames) != self.num_cs:
+                print("Couldn't detect "+str(self.num_cs)+" CSs! Try again with another coordinates, or alter the threshold.")
+                return 0
             else:
                 pass
 
-            ret, frame = video.read()
+            self.cs_start_frames_sessions.append(cs_start_frames)
 
-            if ret:
-                if frame[light_coordinates[i][1]][light_coordinates[i][0]][0] > brightness + 100 and x <= 0:
-                    cs_start_frames.append(j)
-                    print("Frame: "+str(j)+" brightness: "+str(frame[light_coordinates[i][1]][light_coordinates[i][0]][0]))
-                    #CSがいったん始まったらfps*20秒+αフレームの間はCSを検出しないようにするため
-                    x = 20 * 20 + 10
-                    y -= 1
-                else:
-                    pass
-                x -= 1
-
-        print("CS: "+str(len(cs_start_frames)))
-
-        if len(cs_start_frames) != num_cs:
-            print("Couldn't detect "+str(num_cs)+" CSs! Try again with another coordinates, or alter the threshold.")
-            return 0
-        else:
-            pass
-
-        cs_start_frames_sessions.append(cs_start_frames)
-
-    return cs_start_frames_sessions
-
-def main():
-    pass
-
-if __name__ == '__main__':
-    detectCS("EarlyWeaning/videos/191001Ext")
+        return self.cs_start_frames_sessions
