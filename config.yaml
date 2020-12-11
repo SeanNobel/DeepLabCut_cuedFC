@@ -4,6 +4,10 @@ paths:
 # Number of conditioned stimulus (CS), or pairs of US-CS
 num_cs: 6
 
+cs_length: 20 # (s)
+
 # Number of sessioins included in working_dir
 # Each session is considered to have the same timing of CS for all mice in that session. If not, contact @nobel_sean
-num_sessions: 1
+sessions: 1
+
+video_fps: 20 # integer

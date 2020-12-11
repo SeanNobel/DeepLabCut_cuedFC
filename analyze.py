@@ -6,106 +6,109 @@ import glob
 import re
 import pickle
 import csv
-from Modules_basic import get_freezing_rate as frate
-from Modules_basic import detect_cs
 from natsort import natsorted
 import tkinter
 from tkinter import filedialog, messagebox
 import yaml
-import pandas as pd
-import codecs
-import chardet
+from Modules_basic.get_freezing_rate import GetFreezingRate
+from Modules_basic.detect_cs import GetCS_Starts
 
 
 def Analyze():
-    print("Running analysis...")
-
     if os.path.exists(cs_start_frames_path):
         with open(cs_start_frames_path, 'rb') as f:
             cs_start_frames = pickle.load(f)
     else:
-        #session数 x cs数の行列が返ってくる
-        cs_start_frames = detect_cs.detectCS(box1_videos, num_cs)
+        # Returns a matrix of session_num x cs_num
+        csTimingGetter = GetCS_Starts(session_representative_videos, num_cs)
+        cs_start_frames = csTimingGetter()
         with open(cs_start_frames_path, 'wb') as f:
             pickle.dump(cs_start_frames, f)
 
-    #session数,cs数が合っているか確認する
+    # Confirms if session_num and cs_num are correct
     if cs_start_frames == 0:
         return 0
     elif len(cs_start_frames) != num_sessions:
         print("Example videos number mismatch!")
         return 0
 
-    #with open('EarlyWeaning/191001Ext-CSstarts.pkl', 'wb') as f:
-    #    pickle.dump(cs_start_frames, f)
 
-    rate_container = np.empty((num_mice, num_cs+1)) #base用の+1
+    rate_container = np.empty((num_mice, num_cs+1)) # +1 for baseline
 
 
     for i in range(num_mice):
         path = csv_files[i]
         print("Loading: " + path)
         #(freezing_frames_dirで渡したパスにフレームごとの0/1も格納される)
-        rate_container = frate.getFreezingRate(fps, bodypartsToUse, path, num_cs, cs_start_frames[session_mice[i]-1], os.path.splitext(os.path.basename(path))[0], freezing_frames_dir, distance_dir, freezing_photometry_dir)
-        #pickleに書き込み
-        # with open(analyzed_data_dir+date+"_Mouse"+str(mice[i])+"_"+groups[mice_in_groups[i]]+".pkl", 'wb') as f:
-        """
-        with open(analyzed_data_dir+date+"_"+os.path.splitext(os.path.split(path)[1])[0]+".pkl", 'wb') as f:
-            pickle.dump(rate_container, f)
-        """
-        #csvに書き込み
-        # with open(analyzed_data_dir+"csv/"+date+"_Mouse"+str(mice[i])+"_"+groups[mice_in_groups[i]]+".csv", 'w') as f:
-        with open(analyzed_data_dir+os.path.splitext(os.path.split(path)[1])[0]+".csv", 'w') as f:
+        FreezingRateGetter = GetFreezingRate(fps, cs_length, bodyparts2use, path, num_cs, cs_start_frames[session_mice[i]-1], \
+            os.path.splitext(os.path.basename(path))[0])
+        rate_container = FreezingRateGetter(freezing_frames_dir, distance_dir, each_frames_dir)
+
+        with open(analyzed_data_dir + os.path.splitext(os.path.split(path)[1])[0] + ".csv", 'w') as f:
             writer = csv.writer(f)
             writer.writerow(rate_container)
 
-    """
-    for i in range(num_mice):
-        plt.plot(np.arange(num_cs)+1, data_container[i])
-
-    plt.show()
-    """
     return 0
 
 def getWorkingDir():
     root = tkinter.Tk()
     root.withdraw()
     fTyp = [("", "*")]
-    tkinter.messagebox.showinfo('getWorkingDir()', 'Select the directory where videos and h5 files exist.')
+    tkinter.messagebox.showinfo('getWorkingDir()', 'Select the directory where videos and csv files exist.')
 
     return tkinter.filedialog.askdirectory(initialdir = data_root)
 
-def getBox1Video(i):
+def getRepresentativeVideo(i):
     root = tkinter.Tk()
     root.withdraw()
     fTyp = [("", "*.avi")]
-    tkinter.messagebox.showinfo('getBox1Video', "Select a representative video for session " + str(i+1))
+    tkinter.messagebox.showinfo("Select a representative video for session " + str(i+1), \
+        "Each session is considered to have the same timing of CS for all mice in that session. If not, contact @nobel_sean")
 
     return tkinter.filedialog.askopenfilename(filetypes=fTyp, initialdir=working_dir)
 
-def getNumCS():
-    types = ['FC (5US-CS)', 'Ext (40CS)', 'Test (6CS)']
-    root = tkinter.Tk()
 
-    var = tkinter.IntVar(master=root, value=1)
+class BodyPartsReader:
+    def __init__(self, first_csv_file):
+        self.path = first_csv_file
 
-    l = tkinter.Label(master=root, bg="Lightblue", width="10", textvariable=var)
-    l.pack()
+    def csv_read_row(self):
+        with open(self.path) as f:
+            reader = csv.reader(f)
+            for row in reader:
+                if reader.line_num == 2: return row
+        return 0
 
-    for i in range(3):
-        r = tkinter.Radiobutton(master=root, text=types[i], value=i+1, var=var)
-        r.pack()
+    def __call__(self):
+        l = self.csv_read_row()
 
-    # ここは書いてる途中
+        l = l[1:]
+        l = sorted(set(l), key=l.index)
 
-    root.mainloop()
+        return l
 
-    return value
 
-def readBodyparts():
-    with codecs.open(csv_files[0], 'r', 'utf-8', 'ignore') as file:
-        df = pd.read_table(file, delimiter=",")
-        print(df)
+class GetBodypartsToUse:
+    def __init__(self, bp_array):
+        self.bodyparts = bp_array
+        self.bodyparts2use = []
+
+    def bodyparts_to_use(self):
+        for i in range(len(self.bodyparts)):
+            inp = input("Use " + bodyparts[i] + "? [y/n] >> ") == 'y'
+
+            if inp:
+                self.bodyparts2use.append(self.bodyparts[i])
+                self.bodyparts[i] = 1
+            else:
+                self.bodyparts[i] = 0
+
+        print("Using " + str(self.bodyparts2use))
+
+    def __call__(self):
+        self.bodyparts_to_use()
+
+        return self.bodyparts
 
 
 
@@ -128,36 +131,36 @@ if not os.path.exists(analyzed_data_dir):
 csv_files = natsorted(glob.glob(working_dir + '/*.csv'))
 num_mice = len(csv_files)
 if num_mice == 0:
-    print("There is no h5 file. You may have chosen a wrong directory.")
+    print("There is no csv file. You may have chosen a wrong directory.")
     sys.exit()
 print("Analyzing " + str(num_mice) + " mice.")
 
 num_cs = config['num_cs']
-num_sessions = config['num_sessions']
+num_sessions = config['sessions']
+fps = config['video_fps']
+cs_length = config['cs_length']
 
-bodyparts_in_DLC = readBodyparts()
-print("How many bodyparts to use?")
-bodypartsToUse = int(input())
+bpReader = BodyPartsReader(csv_files[0])
+bodyparts = bpReader()
+print(str(len(bodyparts)) + " boodyparts were analyzed in DeepLabCut.")
 
-# print("How many bodyparts in DLC?")
-# num_bodyparts = int(input())
+bp2useReader = GetBodypartsToUse(bodyparts)
+bodyparts2use = bp2useReader()
+print(bodyparts2use)
 
-print("FPS, 15 or 20?")
-fps = int(input())
-
-box1_videos = np.array([])
+session_representative_videos = np.array([])
 for i in range(num_sessions):
-    box1_video = getBox1Video(i)
-    box1_videos = np.append(box1_videos, box1_video)
+    session_representative_video = getRepresentativeVideo(i)
+    session_representative_videos = np.append(session_representative_videos, session_representative_video)
 
-print(box1_videos)
+print("Session representative videos >> ")
+print(session_representative_videos)
 
-# print("Enter in which session each mouse is included. (1,2,...)")
 tkinter.messagebox.showinfo('main', "Enter in which session each mouse is included. (1,2,...)")
 session_mice = np.array([], dtype=np.int64)
-for csv in csv_files:
-    print(os.path.split(csv)[1])
+for c in csv_files:
+    print(os.path.split(c)[1])
     session_mice = np.append(session_mice, int(input()))
-print(session_mice)
 
-Analyze()
+print("Running analysis...")
+_ = Analyze()
