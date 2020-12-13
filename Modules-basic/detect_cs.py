@@ -6,6 +6,7 @@ import tqdm
 import glob
 from natsort import natsorted
 
+# This class was brought from https://whitecat-student.hatenablog.com/entry/2016/11/09/225631
 class mouseParam:
     def __init__(self, input_img_name):
         #マウス入力用のパラメータ
