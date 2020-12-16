@@ -16,7 +16,7 @@ class GetFreezingRate:
         self.bodyparts_all = len(bodyparts2use)
         self.bodyparts2use = np.sum(bodyparts2use)
         self.filename = os.path.dirname(filename) + "/" + os.path.splitext(os.path.basename(filename))[0] + ".h5"
-        print(self.filename)
+        print("Loading h5 file: " + str(self.filename))
         # self.num_cs = num_cs
         self.cs_starting_frame = cs_starting_frame
         self.filename_base = filename_base
@@ -100,10 +100,10 @@ class GetFreezingRate:
     def __call__(self, freezing_frames_dir, distance_dir, each_frames_dir):
         #ベースライン用
         base_start = self.cs_starting_frame[0] - self.cs_length * self.fps
+        print("CS starting frames: " + str(self.cs_starting_frame))
+
         self.cs_starting_frame.insert(0, base_start)
         cs_and_base = len(self.cs_starting_frame)
-        print(self.cs_starting_frame)
-        print(cs_and_base)
 
         freezing_rate = np.empty(cs_and_base)
 
@@ -113,7 +113,7 @@ class GetFreezingRate:
 
         freezing_frames, distance_container = self.detect_freezing_with_snout_ears(video_length, coordinates)
 
-    	#freezingしているフレームの情報を0/1で出力（video_with_indicatior用）
+    	#freezing frames -> 1, not-freezing frames -> 0
         with open(freezing_frames_dir + self.filename_base + '.pkl', 'wb') as f:
             pickle.dump(freezing_frames, f)
 
