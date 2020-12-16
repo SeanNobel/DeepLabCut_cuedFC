@@ -8,6 +8,7 @@ from natsort import natsorted
 import os
 import tkinter
 from tkinter import filedialog, messagebox
+import yaml
 
 def CreateVideo():
     # mouse_id = mouse_and_session[0]
@@ -46,7 +47,7 @@ def CreateVideo():
     font = cv2.FONT_HERSHEY_SIMPLEX
     x = 0
     cs = -1 # CSカウント用
-    accumFreezing = np.zeros(numcs)
+    accumFreezing = np.zeros(num_cs)
     for i in tqdm(range(frames)):
         ret, frame = video.read()
 
@@ -58,7 +59,7 @@ def CreateVideo():
         if ret:
             if x > 0:
                 #cv2.putText(frame, "movement:"+str(int(distance[i])), (365,470), font, 1, (255,255,255), 2, cv2.LINE_AA)
-                for j in range(numcs):
+                for j in range(num_cs):
                     if j % 2 == 0:
                         cv2.putText(frame, str(round(accumFreezing[j]*100.0/(20.0*fps), 1)) + "%", (10, (j+2)*10), font, 0.7, (0,0,255), 1, cv2.LINE_AA)
                     else:
@@ -82,6 +83,8 @@ def CreateVideo():
 
     cv2.destroyAllWindows()
 
+    return 0
+
 def getVideoToCreate():
     root = tkinter.Tk()
     root.withdraw()
@@ -102,43 +105,22 @@ def getH5File():
 
     return h5filepath
 
-if __name__ == '__main__':
-    fps = 20
-    data_root = "D:/"
-    video_path, work_dir = getVideoToCreate()
-    create_dir = work_dir + "/CreatedVideos"
 
-    if not os.path.exists(create_dir):
-        os.makedirs(create_dir)
+with open('config.yaml', 'r') as yml:
+    config = yaml.load(yml, Loader=yaml.FullLoader)
 
-    h5file = getH5File()
-    """
-    for video in videos:
-        root = tkinter.Tk()
-        root.withdraw()
-        fTyp = [("", "*.h5")]
+fps = config['video_fps']
+num_cs = config['num_cs']
+data_root = "D:/"
+video_path, work_dir = getVideoToCreate()
+create_dir = work_dir + "/CreatedVideos"
 
-        iDir = os.path.split(video)[0]
-        print('Select h5 file for ' + os.path.split(video)[1])
-        tkinter.messagebox.showinfo('Create analyzed videos', 'Select h5 file for ' + os.path.split(video)[1])
-        file = tkinter.filedialog.askopenfilename(filetypes=fTyp, initialdir=iDir)
-        if file == "":
-            break
-    """
+if not os.path.exists(create_dir):
+    os.makedirs(create_dir)
 
-    print("How many US-CS or CS?")
-    numcs = int(input())
+h5file = getH5File()
 
-    print("Which session is that video in?")
-    session = int(input())
+print("Which session is that video in ? (1,2,...)")
+session = int(input())
 
-    # print("Mouse ID?")
-    # mouse_id = int(input())
-
-    CreateVideo()
-
-    """
-    for mouse_and_session in x:
-        print(videos[mouse_and_session[0]-1])
-        main(mouse_and_session, dir, numcs, videos[mouse_and_session[0]-1])
-    """
+_ = CreateVideo()

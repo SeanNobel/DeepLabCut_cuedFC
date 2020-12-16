@@ -11,3 +11,5 @@ cs_length: 20 # (s)
 sessions: 1
 
 video_fps: 20 # integer
+
+cs_detect_threshold: 200 # light intensity to detect startings of CS (0~255)

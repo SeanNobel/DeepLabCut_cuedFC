@@ -20,8 +20,8 @@ def Analyze():
             cs_start_frames = pickle.load(f)
     else:
         # Returns a matrix of session_num x cs_num
-        csTimingGetter = GetCS_Starts(session_representative_videos, num_cs)
-        cs_start_frames = csTimingGetter()
+        csTimingGetter = GetCS_Starts(session_representative_videos, num_cs, config['cs_detect_threshold'])
+        cs_start_frames = csTimingGetter(fps, cs_length)
         with open(cs_start_frames_path, 'wb') as f:
             pickle.dump(cs_start_frames, f)
 
@@ -38,7 +38,7 @@ def Analyze():
 
     for i in range(num_mice):
         path = csv_files[i]
-        print("Loading: " + path)
+        print("Loading csv file: " + path)
         #(freezing_frames_dirで渡したパスにフレームごとの0/1も格納される)
         FreezingRateGetter = GetFreezingRate(fps, cs_length, bodyparts2use, path, num_cs, cs_start_frames[session_mice[i]-1], \
             os.path.splitext(os.path.basename(path))[0])
@@ -146,7 +146,7 @@ print(str(len(bodyparts)) + " boodyparts were analyzed in DeepLabCut.")
 
 bp2useReader = GetBodypartsToUse(bodyparts)
 bodyparts2use = bp2useReader()
-print(bodyparts2use)
+# print(bodyparts2use)
 
 session_representative_videos = np.array([])
 for i in range(num_sessions):
@@ -160,6 +160,7 @@ tkinter.messagebox.showinfo('main', "Enter in which session each mouse is includ
 session_mice = np.array([], dtype=np.int64)
 for c in csv_files:
     print(os.path.split(c)[1])
+    print("Session: ")
     session_mice = np.append(session_mice, int(input()))
 
 print("Running analysis...")
