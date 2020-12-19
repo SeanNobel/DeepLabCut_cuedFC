@@ -15,15 +15,18 @@ from Modules_basic.detect_cs import GetCS_Starts
 
 
 def Analyze():
-    if os.path.exists(cs_start_frames_path):
-        with open(cs_start_frames_path, 'rb') as f:
+    if os.path.exists(cs_start_frames_pkl):
+        with open(cs_start_frames_pkl, 'rb') as f:
             cs_start_frames = pickle.load(f)
     else:
         # Returns a matrix of session_num x cs_num
-        csTimingGetter = GetCS_Starts(session_representative_videos, num_cs, config['cs_detect_threshold'])
+        csTimingGetter = GetCS_Starts(session_representative_videos, num_cs, config['cs_light_threshold'])
         cs_start_frames = csTimingGetter(fps, cs_length)
-        with open(cs_start_frames_path, 'wb') as f:
+        with open(cs_start_frames_pkl, 'wb') as f:
             pickle.dump(cs_start_frames, f)
+        with open(cs_start_frames_csv, 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(cs_start_frames)
 
     # Confirms if session_num and cs_num are correct
     if cs_start_frames == 0:
@@ -46,7 +49,10 @@ def Analyze():
 
         with open(analyzed_data_dir + os.path.splitext(os.path.split(path)[1])[0] + ".csv", 'w') as f:
             writer = csv.writer(f)
-            writer.writerow(rate_container)
+            if baseline:
+                writer.writerow(rate_container)
+            else:
+                writer.writerow(rate_container[1:])
 
     return 0
 
@@ -118,7 +124,8 @@ with open('config.yaml', 'r') as yml:
 data_root = config['paths']['data_root']
 working_dir = getWorkingDir() + "/"
 analyzed_data_dir = working_dir + "AnalyzedData/"
-cs_start_frames_path = analyzed_data_dir + "cs_start_frames.pkl"
+cs_start_frames_pkl = analyzed_data_dir + "cs_start_frames.pkl"
+cs_start_frames_csv = analyzed_data_dir + "cs_start_frames.csv"
 freezing_frames_dir = analyzed_data_dir + "freezingFrames/"
 distance_dir = analyzed_data_dir + "distance/"
 each_frames_dir = analyzed_data_dir + "eachFrames/"
@@ -139,10 +146,11 @@ num_cs = config['num_cs']
 num_sessions = config['sessions']
 fps = config['video_fps']
 cs_length = config['cs_length']
+baseline = config['baseline']
 
 bpReader = BodyPartsReader(csv_files[0])
 bodyparts = bpReader()
-print(str(len(bodyparts)) + " boodyparts were analyzed in DeepLabCut.")
+print(str(len(bodyparts)) + " bodyparts were analyzed in DeepLabCut.")
 
 bp2useReader = GetBodypartsToUse(bodyparts)
 bodyparts2use = bp2useReader()
