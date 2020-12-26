@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import csv
 import tkinter
 from tkinter import filedialog, messagebox
+from Modules_basic.get_pixel import mouseParam
 
 #h5ファイルを読み、フレーム数と各フレームでの鼻・両耳の中心の座標を返す
 def read_h5_3points(filename):
@@ -226,6 +227,7 @@ def get_sensitivity():
 
     return accum_distance_travelled
 
+
 def get_activity():
     accum_distance_travelled = 0
 
@@ -235,44 +237,6 @@ def get_activity():
 
     return accum_distance_travelled
 
-class mouseParam:
-    def __init__(self, input_img_name):
-        #マウス入力用のパラメータ
-        self.mouseEvent = {"x":None, "y":None, "event":None, "flags":None}
-        #マウス入力の設定
-        cv2.setMouseCallback(input_img_name, self.__CallBackFunc, None)
-
-    #コールバック関数
-    def __CallBackFunc(self, eventType, x, y, flags, userdata):
-
-        self.mouseEvent["x"] = x
-        self.mouseEvent["y"] = y
-        self.mouseEvent["event"] = eventType
-        self.mouseEvent["flags"] = flags
-
-    #マウス入力用のパラメータを返すための関数
-    def getData(self):
-        return self.mouseEvent
-
-    #マウスイベントを返す関数
-    def getEvent(self):
-        return self.mouseEvent["event"]
-
-    #マウスフラグを返す関数
-    def getFlags(self):
-        return self.mouseEvent["flags"]
-
-    #xの座標を返す関数
-    def getX(self):
-        return self.mouseEvent["x"]
-
-    #yの座標を返す関数
-    def getY(self):
-        return self.mouseEvent["y"]
-
-    #xとyの座標を返す関数
-    def getPos(self):
-        return (self.mouseEvent["x"], self.mouseEvent["y"])
 
 def getCoordinate(video_path):
     # video = cv2.VideoCapture(video_path)
@@ -299,6 +263,7 @@ def getCoordinate(video_path):
     cv2.destroyAllWindows()
 
     return coords
+
 
 def edgeCenterTime():
     section = np.array([], dtype=np.int64)
@@ -386,128 +351,129 @@ def getVideoPath():
     return tkinter.filedialog.askopenfilename(filetypes=fTyp, initialdir=working_dir)
 
 
-if __name__ == '__main__':
-    data_root = "D:/"
-    working_dir = getWorkingDir() + "/"
-    # h5files_dir = working_dir + "h5files"
-    edge_center_dir = working_dir + "AnalyzedData/edge_center_ratio/"
-    cs_start_frames_path = working_dir + "AnalyzedData/cs_start_frames.pkl"
-    if not os.path.exists(edge_center_dir):
-        os.makedirs(edge_center_dir)
+with open('config.yaml', 'r') as yml:
+    config = yaml.load(yml, Loader=yaml.FullLoader)
 
-    h5files = natsort.natsorted(glob.glob(working_dir + "*.h5"))
-    print("Analyzing " + str(len(h5files)) + " mice.")
-    num_mice = len(h5files)
+data_root = config['paths']['data_root']
+working_dir = getWorkingDir() + "/"
+edge_center_dir = working_dir + "AnalyzedData/edge_center_ratio/"
+cs_start_frames_path = working_dir + "AnalyzedData/cs_start_frames.pkl"
+if not os.path.exists(edge_center_dir):
+    os.makedirs(edge_center_dir)
 
-    print("How many bodyparts? (Only 2 or 3 are available for now.)")
-    bodyparts = int(input())
+h5files = natsort.natsorted(glob.glob(working_dir + "*.h5"))
+print("Analyzing " + str(len(h5files)) + " mice.")
+num_mice = len(h5files)
 
-    # tkinter.messagebox.showinfo('Distance & edge/center ratio', 'Enter in which session each mouse is includued. (1,2,...)')
-    mice_in_sessions = np.array([], dtype=np.int64)
-    videos = np.array([], dtype=np.str)
-    print("Enter in which session each mouse is included.")
-    for h5file in h5files:
-        print(os.path.split(h5file)[1])
-        mice_in_sessions = np.append(mice_in_sessions, int(input()))
+print("How many bodyparts? (Only 2 or 3 are available for now.)")
+bodyparts = int(input())
 
-    print("Select the video for each h5 file.")
-    for h5file in h5files:
-        print(os.path.split(h5file)[1])
-        videos = np.append(videos, getVideoPath())
+# tkinter.messagebox.showinfo('Distance & edge/center ratio', 'Enter in which session each mouse is includued. (1,2,...)')
+mice_in_sessions = np.array([], dtype=np.int64)
+videos = np.array([], dtype=np.str)
+print("Enter in which session each mouse is included.")
+for h5file in h5files:
+    print(os.path.split(h5file)[1])
+    mice_in_sessions = np.append(mice_in_sessions, int(input()))
 
-    print(videos)
+print("Select the video for each h5 file.")
+for h5file in h5files:
+    print(os.path.split(h5file)[1])
+    videos = np.append(videos, getVideoPath())
 
-    #video_path = working_dir + "box1_videos/Mouse9-IS_male_FearCondition_20191129-143941.avi"
-    #test_video_name = working_dir + "test2.avi"
+print(videos)
 
-    """
-    px_to_cm = px_to_cm() #長さ4の配列 各箱で1px何cmか
-    mice_in_boxes = []
-    """
+#video_path = working_dir + "box1_videos/Mouse9-IS_male_FearCondition_20191129-143941.avi"
+#test_video_name = working_dir + "test2.avi"
 
-    sensitivities = []
-    activities = []
+"""
+px_to_cm = px_to_cm() #長さ4の配列 各箱で1px何cmか
+mice_in_boxes = []
+"""
 
-    """
-    print("h5 files: " + str(h5files))
-    if not len(mice_in_sessions) == len(h5files):
-        print("h5files and mice number mismatch.")
-    """
+sensitivities = []
+activities = []
 
-    cs_start_frames = get_cs_start_frames()
-    print("Sessions: " + str(len(cs_start_frames)))
-    print(cs_start_frames)
+"""
+print("h5 files: " + str(h5files))
+if not len(mice_in_sessions) == len(h5files):
+    print("h5files and mice number mismatch.")
+"""
 
-    left_up_edges = []
-    # right_up_edges = []
-    # left_down_edges = []
-    right_down_edges = []
+cs_start_frames = get_cs_start_frames()
+print("Sessions: " + str(len(cs_start_frames)))
+print(cs_start_frames)
 
-
-    for i in range(len(h5files)):
-        left_up_edges.append(getCoordinate(videos[i]))
-        # right_up_edges.append(getCoordinate(videos[i]))
-        # left_down_edges.append(getCoordinate(videos[i]))
-        right_down_edges.append(getCoordinate(videos[i]))
-
-    # print(len(left_up_edges))
-
-    # for i in range(9, len(mice_in_sessions)): #Mouse10IS♀だけでテスト中...
-    for i in range(len(h5files)):
-        video = cv2.VideoCapture(videos[i])
-        fps = int(video.get(cv2.CAP_PROP_FPS))
-        width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-        output_video_name = working_dir + "AnalyzedData/" + os.path.splitext(os.path.basename(h5files[i]))[0] + ".avi"
-
-        # frames, coordinates, coord_snout, coord_rightear, coord_leftear, prob = read_h5(h5files[i])
-        if bodyparts == 3:
-            frames, coordinates = read_h5_3points(h5files[i])
-        elif bodyparts == 2:
-            frames, coordinates = read_h5_2points(h5files[i])
-        else:
-            print("Only 2 or 3 are available for now.")
-            kill()
-
-        # if coordinates == 0: sys.exit()
-
-        # coordinatesが一瞬だけ飛んだりするのを補正する
-        # coordinates = coordinates_correction(coordinates)
-
-        this_cs_start_frames = cs_start_frames[mice_in_sessions[i]-1]
-        this_first_cs_start_frame = this_cs_start_frames[0]
-
-        sensitivity = get_sensitivity()
-        sensitivities.append(sensitivity)
-
-        activity = get_activity()
-        activities.append(activity)
-
-        left_up_edge = left_up_edges[i]
-        right_down_edge = right_down_edges[i]
-        x_border1 = left_up_edge[0] + (right_down_edge[0]-left_up_edge[0]) / 4
-        x_border2 = left_up_edge[0] + (right_down_edge[0]-left_up_edge[0]) * 3 / 4
-        y_border1 = left_up_edge[1] + (right_down_edge[1]-left_up_edge[1]) / 4
-        y_border2 = left_up_edge[1] + (right_down_edge[1]-left_up_edge[1]) * 3 / 4
-
-        section, edge_prob, corner_prob, center_prob = edgeCenterTime()
-        with open(edge_center_dir + os.path.splitext(os.path.basename(h5files[i]))[0] + ".csv", 'w') as f:
-            writer = csv.writer(f)
-            writer.writerow(["edge", edge_prob])
-            writer.writerow(["corner", corner_prob])
-            writer.writerow(["center", center_prob])
-
-            #video_path = working_dir + "box1_videos/Mouse2-IS_male_FearCondition_20191129-132143.avi"
-
-        if i == 0:
-            _ = body_center_video()
+left_up_edges = []
+# right_up_edges = []
+# left_down_edges = []
+right_down_edges = []
 
 
-    print(sensitivities)
-    print(activities)
+for i in range(len(h5files)):
+    left_up_edges.append(getCoordinate(videos[i]))
+    # right_up_edges.append(getCoordinate(videos[i]))
+    # left_down_edges.append(getCoordinate(videos[i]))
+    right_down_edges.append(getCoordinate(videos[i]))
 
-    with open(working_dir+"AnalyzedData/activity&sensitivity.csv", 'w') as f:
+# print(len(left_up_edges))
+
+# for i in range(9, len(mice_in_sessions)): #Mouse10IS♀だけでテスト中...
+for i in range(len(h5files)):
+    video = cv2.VideoCapture(videos[i])
+    fps = int(video.get(cv2.CAP_PROP_FPS))
+    width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    output_video_name = working_dir + "AnalyzedData/" + os.path.splitext(os.path.basename(h5files[i]))[0] + ".avi"
+
+    # frames, coordinates, coord_snout, coord_rightear, coord_leftear, prob = read_h5(h5files[i])
+    if bodyparts == 3:
+        frames, coordinates = read_h5_3points(h5files[i])
+    elif bodyparts == 2:
+        frames, coordinates = read_h5_2points(h5files[i])
+    else:
+        print("Only 2 or 3 are available for now.")
+        kill()
+
+    # if coordinates == 0: sys.exit()
+
+    # coordinatesが一瞬だけ飛んだりするのを補正する
+    # coordinates = coordinates_correction(coordinates)
+
+    this_cs_start_frames = cs_start_frames[mice_in_sessions[i]-1]
+    this_first_cs_start_frame = this_cs_start_frames[0]
+
+    sensitivity = get_sensitivity()
+    sensitivities.append(sensitivity)
+
+    activity = get_activity()
+    activities.append(activity)
+
+    left_up_edge = left_up_edges[i]
+    right_down_edge = right_down_edges[i]
+    x_border1 = left_up_edge[0] + (right_down_edge[0]-left_up_edge[0]) / 4
+    x_border2 = left_up_edge[0] + (right_down_edge[0]-left_up_edge[0]) * 3 / 4
+    y_border1 = left_up_edge[1] + (right_down_edge[1]-left_up_edge[1]) / 4
+    y_border2 = left_up_edge[1] + (right_down_edge[1]-left_up_edge[1]) * 3 / 4
+
+    section, edge_prob, corner_prob, center_prob = edgeCenterTime()
+    with open(edge_center_dir + os.path.splitext(os.path.basename(h5files[i]))[0] + ".csv", 'w') as f:
         writer = csv.writer(f)
-        writer.writerow(sensitivities)
-        writer.writerow(activities)
+        writer.writerow(["edge", edge_prob])
+        writer.writerow(["corner", corner_prob])
+        writer.writerow(["center", center_prob])
+
+        #video_path = working_dir + "box1_videos/Mouse2-IS_male_FearCondition_20191129-132143.avi"
+
+    if i == 0:
+        _ = body_center_video()
+
+
+print(sensitivities)
+print(activities)
+
+with open(working_dir+"AnalyzedData/activity&sensitivity.csv", 'w') as f:
+    writer = csv.writer(f)
+    writer.writerow(sensitivities)
+    writer.writerow(activities)

@@ -1,13 +1,20 @@
-paths:
-  data_root: "D:/"
-
-# Number of conditioned stimulus (CS), or pairs of US-CS
-num_cs: 6
-
-cs_length: 20 # (s)
-
 # Number of sessioins included in working_dir
 # Each session is considered to have the same timing of CS for all mice in that session. If not, contact @nobel_sean
 sessions: 1
+# Number of conditioned stimulus (CS), or pairs of US-CS
+num_cs: 30
+# FC->False, Ext,Test->True
+baseline: True
+
+paths:
+  data_root: "D:/"
+
+cs_length: 20 # (s)
 
 video_fps: 20 # integer
+
+cs_light_threshold: 200 # light intensity to detect startings of CS (0~255)
+
+LPfilter: 10
+frames2look: 5
+freezing_threshold: 12
