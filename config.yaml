@@ -2,7 +2,7 @@
 # Each session is considered to have the same timing of CS for all mice in that session. If not, contact @nobel_sean
 sessions: 1
 # Number of conditioned stimulus (CS), or pairs of US-CS
-num_cs: 30
+num_cs: 6
 # FC->False, Ext,Test->True
 baseline: True
 

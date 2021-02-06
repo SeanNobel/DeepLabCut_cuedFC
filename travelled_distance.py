@@ -14,6 +14,7 @@ import csv
 import tkinter
 from tkinter import filedialog, messagebox
 from Modules_basic.get_pixel import mouseParam
+import yaml
 
 #h5ファイルを読み、フレーム数と各フレームでの鼻・両耳の中心の座標を返す
 def read_h5_3points(filename):
@@ -141,7 +142,7 @@ def body_center_video():
 
     out = cv2.VideoWriter(output_video_name, cv2.VideoWriter_fourcc('M','J','P','G'), fps, (width, height))
 
-    accum_distance = 0
+    # accum_distance = 0
     iForSection = 0
 
     print("Writing video...")
@@ -204,7 +205,6 @@ def draw_graph():
     x = np.arange(frames) / fps
 
     plt.plot(x, accum_distance_travelled)
-
     plt.show()
 
     return 0
@@ -354,6 +354,7 @@ def getVideoPath():
 with open('config.yaml', 'r') as yml:
     config = yaml.load(yml, Loader=yaml.FullLoader)
 
+
 data_root = config['paths']['data_root']
 working_dir = getWorkingDir() + "/"
 edge_center_dir = working_dir + "AnalyzedData/edge_center_ratio/"
@@ -434,7 +435,7 @@ for i in range(len(h5files)):
         frames, coordinates = read_h5_2points(h5files[i])
     else:
         print("Only 2 or 3 are available for now.")
-        kill()
+        sys.exit()
 
     # if coordinates == 0: sys.exit()
 
