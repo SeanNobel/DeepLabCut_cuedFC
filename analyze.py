@@ -10,8 +10,8 @@ from natsort import natsorted
 import tkinter
 from tkinter import filedialog, messagebox
 import yaml
-from Modules_basic.get_freezing_rate import GetFreezingRate
-from Modules_basic.detect_cs import GetCS_Starts
+from Modules.get_freezing_rate import GetFreezingRate
+from Modules.detect_cs import GetCS_Starts
 
 
 def Analyze():
@@ -56,10 +56,10 @@ def Analyze():
 
     return 0
 
-def getWorkingDir():
+def getDirPath():
     root = tkinter.Tk()
     root.withdraw()
-    fTyp = [("", "*")]
+    fileType = [("", "*")]
     tkinter.messagebox.showinfo('getWorkingDir()', 'Select the directory where videos and csv files exist.')
 
     return tkinter.filedialog.askdirectory(initialdir = data_root)
@@ -121,14 +121,21 @@ class GetBodypartsToUse:
 with open('config.yaml', 'r') as yml:
     config = yaml.load(yml, Loader=yaml.FullLoader)
 
+num_cs = config['num_cs']
+num_sessions = config['sessions']
+fps = config['video_fps']
+cs_length = config['cs_length']
+baseline = config['baseline']
+
 data_root = config['paths']['data_root']
-working_dir = getWorkingDir() + "/"
-analyzed_data_dir = working_dir + "AnalyzedData/"
-cs_start_frames_pkl = analyzed_data_dir + "cs_start_frames.pkl"
-cs_start_frames_csv = analyzed_data_dir + "cs_start_frames.csv"
-freezing_frames_dir = analyzed_data_dir + "freezingFrames/"
-distance_dir = analyzed_data_dir + "distance/"
-each_frames_dir = analyzed_data_dir + "eachFrames/"
+working_dir = getDirPath() + "/"
+analyzed_data_dir = working_dir + config['paths']['analyzed_data']
+cs_start_frames_pkl = analyzed_data_dir + config['paths']['cs_start_frames']
+cs_start_frames_csv = analyzed_data_dir + config['paths']['cs_start_frames_csv']
+freezing_frames_dir = analyzed_data_dir + config['paths']['freezing_frames']
+distance_dir = analyzed_data_dir + config['paths']['distance']
+each_frames_dir = analyzed_data_dir + config['paths']['each_frames']
+
 
 if not os.path.exists(analyzed_data_dir):
     os.makedirs(freezing_frames_dir)
@@ -141,12 +148,6 @@ if num_mice == 0:
     print("There is no csv file. You may have chosen a wrong directory.")
     sys.exit()
 print("Analyzing " + str(num_mice) + " mice.")
-
-num_cs = config['num_cs']
-num_sessions = config['sessions']
-fps = config['video_fps']
-cs_length = config['cs_length']
-baseline = config['baseline']
 
 bpReader = BodyPartsReader(csv_files[0])
 bodyparts = bpReader()

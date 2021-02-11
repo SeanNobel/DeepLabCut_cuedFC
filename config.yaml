@@ -2,14 +2,27 @@
 # Each session is considered to have the same timing of CS for all mice in that session. If not, contact @nobel_sean
 sessions: 1
 # Number of conditioned stimulus (CS), or pairs of US-CS
-num_cs: 30
+num_cs: 6
 # FC->False, Ext,Test->True
 baseline: True
 
+#----directories and files----
 paths:
   data_root: "D:/"
+  analyzed_data: "AnalyzedData/"
+  cs_start_frames: "cs_start_frames.pkl"
+  cs_start_frames_csv: "cs_start_frames.csv"
+  freezing_frames: "freezingFrames/"
+  distance: "distance/"
+  each_frames: "eachFrames/"
+  ec_ratio: "edge_center_ratio/"
+  created_video: "/CreatedVideos"
+
+
 
 cs_length: 20 # (s)
+
+movement_measure_time: 60 #(s)
 
 video_fps: 20 # integer
 
@@ -18,3 +31,8 @@ cs_light_threshold: 200 # light intensity to detect startings of CS (0~255)
 LPfilter: 10
 frames2look: 5
 freezing_threshold: 12
+
+#----parapeters for video writing-----
+afterFrames: 20 #CS終了後何フレームまでビデオに含めるか
+
+ec_ratio: False # Check anxiety-like behavior or not
