@@ -6,88 +6,88 @@ from tqdm import tqdm
 import glob
 from natsort import natsorted
 import os
+import sys
 import tkinter
 from tkinter import filedialog, messagebox
 import yaml
 
-def CreateVideo():
-    # mouse_id = mouse_and_session[0]
-    # session = mouse_and_session[1]
+class CreateVideo:
+    def __init__(self, output_path, data_path, distance_path, cs_start_path, session, video_path, fps, num_cs, afterFrames, cs_length):
+        self.output_path = output_path
+        self.data_path = data_path
+        self.distance_path = distance_path
+        self.cs_start_path = cs_start_path
+        self.session = session
+        self.video_path = video_path
+        self.fps = fps
+        self.num_cs = num_cs
 
-    #input_path = working_dir+"videos/Mouse"+str(mouse_id)+"_labeled.mp4"
-    output_path = create_dir + "/" + os.path.split(video_path)[1]
-    # output_path = working_dir+"freezingFrames/videos/Mouse"+str(mouse_id)+"-withFreezing.avi"
-    data_path = work_dir + "/AnalyzedData/freezingFrames/" + os.path.splitext(os.path.basename(h5file))[0] + ".pkl"
-    distance_path = work_dir + "/AnalyzedData/distance/" + os.path.splitext(os.path.basename(h5file))[0] + ".pkl"
-    cs_start_path = work_dir + "/AnalyzedData/cs_start_frames.pkl"
+        #load distance data of mice movement
+        with open(self.distance_path, 'rb') as f:
+            self.distance = pickle.load(f)
 
-    #マウス移動距離データ読み込み
-    with open(distance_path, 'rb') as f:
-        distance = pickle.load(f)
+        #load data of cs starting frames
+        with open(self.cs_start_path, 'rb') as f:
+            self.cs_starts = pickle.load(f)[self.session - 1]
 
-    #CSが始まるフレームのデータ読み込み
-    with open(cs_start_path, 'rb') as f:
-        cs_starts = pickle.load(f)[session-1]
+        self.video = cv2.VideoCapture(self.video_path)
 
-    video = cv2.VideoCapture(video_path)
+        self.frames = int(self.video.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.width = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.height = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-    width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        if not self.video.isOpened():
+            print("Video not read")
+            sys.exit()
 
-    if not video.isOpened():
-        print("Video not read")
+        self.out = cv2.VideoWriter(self.output_path, cv2.VideoWriter_fourcc('M','J','P','G'), self.fps, (self.width, self.height))
 
-    out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc('M','J','P','G'), fps, (width, height))
+        with open(self.data_path, 'rb') as f:
+            self.freezing_time = pickle.load(f)
 
-    f = open(data_path, "rb")
-    freezing_time = pickle.load(f)
+    def create(self):
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        self.x = 0
+        self.cs = -1 # for counting CS number
+        self.accumFreezing = np.zeros(self.num_cs)
 
-    #CS中のフレームのみ書き出し
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    x = 0
-    cs = -1 # CSカウント用
-    accumFreezing = np.zeros(num_cs)
-    for i in tqdm(range(frames)):
-        ret, frame = video.read()
+        for i in tqdm(range(self.frames)):
+            ret, frame = self.video.read()
 
-        if i in cs_starts:
-            x = fps * 20 + 15
-            cs += 1
-        x -= 1
+            if i in self.cs_starts:
+                self.x = self.fps * 20 + afterFrames
+                self.cs += 1
+            self.x -= 1
 
-        if ret:
-            if x > 0:
-                #cv2.putText(frame, "movement:"+str(int(distance[i])), (365,470), font, 1, (255,255,255), 2, cv2.LINE_AA)
-                # 全CSのすくみ％を表示
-                """
-                for j in range(num_cs):
-                    if j % 2 == 0:
-                        cv2.putText(frame, str(round(accumFreezing[j]*100.0/(20.0*fps), 1)) + "%", (10, (j+2)*10), font, 0.7, (0,0,255), 1, cv2.LINE_AA)
+            if ret:
+                if self.x > 0:
+                    for j in range(self.num_cs):
+                        if j % 2 == 0:
+                            cv2.putText(frame, str(round(self.accumFreezing[j] * 100 / (cs_length * self.fps), 1)) + "%", (10, (j+2) * 10), font, 0.7, (0,0,255), 1, cv2.LINE_AA)
+                        else:
+                            cv2.putText(frame, str(round(self.accumFreezing[j] * 100 / (cs_length * self.fps), 1)) + "%", (78, (j+1) * 10), font, 0.7, (0,0,255), 1, cv2.LINE_AA)
+                    # frame = cv2.rectangle(frame, (620,470-int(distance[i])), (630,470), (0,0,255), -1)
+                    if self.freezing_time[i] == 1:
+                        frame = cv2.putText(frame, "Freezing.", (200, 40), font, 1.5, (0,0,255), 4, cv2.LINE_AA)
+                        #累積FreezingRate表示
+                        if self.x > afterFrames:
+                            self.accumFreezing[self.cs] += 1
+                        self.out.write(frame)
                     else:
-                        cv2.putText(frame, str(round(accumFreezing[j]*100.0/(20.0*fps), 1)) + "%", (78, ((j+1)*10)), font, 0.7, (0,0,255), 1, cv2.LINE_AA)
-                """
-                cv2.putText(frame, str(round(accumFreezing[cs]*100/(20*fps), 1) + "%", (10, 10), font, 0.7, (0,0,255), 1, cv2.LINE_AA))
-                # frame = cv2.rectangle(frame, (620,470-int(distance[i])), (630,470), (0,0,255), -1)
-                if freezing_time[i] == 1:
-                    frame = cv2.putText(frame, "Freezing.", (200, 40), font, 1.5, (0,0,255), 4, cv2.LINE_AA)
-                    #累積FreezingRate表示
-                    if x > 15:
-                        accumFreezing[cs] += 1
-                    out.write(frame)
-                else:
-                    out.write(frame)
+                        self.out.write(frame)
             else:
-                pass
-        else:
-            break
+                break
 
-    video.release()
-    out.release()
+        self.video.release()
+        self.out.release()
 
-    cv2.destroyAllWindows()
+        cv2.destroyAllWindows()
 
-    return 0
+        return 0
+
+    def __call__(self):
+        _ = self.create() # Writes video only during CS and previous x seconds
+
 
 def getVideoToCreate():
     root = tkinter.Tk()
@@ -110,21 +110,41 @@ def getH5File():
     return h5filepath
 
 
+
 with open('config.yaml', 'r') as yml:
     config = yaml.load(yml, Loader=yaml.FullLoader)
 
 fps = config['video_fps']
 num_cs = config['num_cs']
-data_root = "D:/"
+afterFrames = config['afterFrames']
+cs_length = config['cs_length']
+
+data_root = config['paths']['data_root']
 video_path, work_dir = getVideoToCreate()
-create_dir = work_dir + "/CreatedVideos"
+create_dir = work_dir + config['paths']['created_video']
 
 if not os.path.exists(create_dir):
     os.makedirs(create_dir)
 
+isMP4 = input("Are you creating video from mp4? [y/n] >> ") == 'y'
+if isMP4:
+    print("Creating video from mp4.")
+else:
+    print("Creating video from avi.")
+
 h5file = getH5File()
+
+if isMP4:
+    output_path = create_dir + "/" + os.path.splitext(os.path.split(video_path)[1])[0] + ".avi"
+else:
+    output_path = create_dir + "/" + os.path.split(video_path)[1]
+data_path = work_dir + "/AnalyzedData/freezingFrames/" + os.path.splitext(os.path.basename(h5file))[0] + ".pkl"
+distance_path = work_dir + "/AnalyzedData/distance/" + os.path.splitext(os.path.basename(h5file))[0] + ".pkl"
+cs_start_path = work_dir + "/AnalyzedData/cs_start_frames.pkl"
 
 print("Which session is that video in ? (1,2,...)")
 session = int(input())
 
-_ = CreateVideo()
+videoCreator = CreateVideo(output_path, data_path, distance_path, cs_start_path, session, video_path, fps, num_cs, afterFrames, cs_length)
+
+videoCreator()

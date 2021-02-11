@@ -11,13 +11,8 @@ from tkinter import filedialog, messagebox
 import yaml
 
 def CreateVideo():
-    # mouse_id = mouse_and_session[0]
-    # session = mouse_and_session[1]
-
-    #input_path = working_dir+"videos/Mouse"+str(mouse_id)+"_labeled.mp4"
     output_path = create_dir + "/" + os.path.splitext(os.path.split(video_path)[1])[0] + ".avi"
     print(output_path)
-    # output_path = working_dir+"freezingFrames/videos/Mouse"+str(mouse_id)+"-withFreezing.avi"
     data_path = work_dir + "/AnalyzedData/freezingFrames/" + os.path.splitext(os.path.basename(h5file))[0] + ".pkl"
     distance_path = work_dir + "/AnalyzedData/distance/" + os.path.splitext(os.path.basename(h5file))[0] + ".pkl"
     cs_start_path = work_dir + "/AnalyzedData/cs_start_frames.pkl"
